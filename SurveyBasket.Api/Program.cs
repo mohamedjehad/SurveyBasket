@@ -1,12 +1,15 @@
 using FluentValidation;
+using Microsoft.EntityFrameworkCore;
 using SharpGrip.FluentValidation;
 using SharpGrip.FluentValidation.AutoValidation.Mvc.Extensions;
 using SurveyBasket.Api;
+using SurveyBasket.Api.Presistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddDependencies();
+builder.Services.AddDependencies(builder.Configuration);
+
 
 var app = builder.Build();
 
@@ -14,7 +17,7 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
-    //app.UseSwaggerUI(options => options.SwaggerEndpoint("/openapi/v1.json", "v1"));
+    app.UseSwaggerUI(options => options.SwaggerEndpoint("/openapi/v1.json", "v1"));
 }
 
 app.UseHttpsRedirection();

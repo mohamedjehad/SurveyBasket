@@ -1,12 +1,18 @@
-﻿namespace SurveyBasket.Api.Controllers;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Options;
+using SurveyBasket.Api.Authentication;
+using SurveyBasket.Api.Contracts.Polls;
+
+namespace SurveyBasket.Api.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
 public class PollsController(IPollService pollService) : ControllerBase
 {
- private readonly IPollService _pollService= pollService;
+    private readonly IPollService _pollService= pollService;
 
     [HttpGet]
+    [Authorize]
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
     {
         var polls = await _pollService.GetAllAsync(cancellationToken);
@@ -55,5 +61,7 @@ public class PollsController(IPollService pollService) : ControllerBase
 
         return NoContent();
     }
+
+   
 
 }

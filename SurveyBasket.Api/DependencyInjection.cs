@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using SurveyBasket.Api.Authentication;
+using SurveyBasket.Api.Errors;
 using System.Security.Claims;
 using System.Text;
 
@@ -17,9 +18,20 @@ public static class DependencyInjection
         // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
         services.AddOpenApi();
 
+        var allowedOrigins = configuration.GetSection("AllowedOrigins").Get<string[]>();
+
+        services.AddCors(options =>
+        options.AddDefaultPolicy(builder =>
+        builder
+        .WithOrigins(allowedOrigins!)
+        .AllowAnyMethod()
+        .AllowAnyHeader())
+        );
+
         services.AddScoped<IPollService, PollService>();
         services.AddScoped<IAuthService, AuthService>();
-
+        services.AddExceptionHandler<GlobalExceptionHandler>();
+        services.AddProblemDetails();
         AddMapsterConfig(services);
         AddAuthConfig(services,configuration);
 

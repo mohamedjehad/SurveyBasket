@@ -14,6 +14,8 @@ global using SurveyBasket.Api.Services;
 global using SurveyBasket.Api.Contracts.Authentication;
 global using SurveyBasket.Api.Presistence;
 global using SurveyBasket.Api.Contracts.Polls;
+global using SurveyBasket.Api.Abstractions;
+
 
 //Validation Packages
 global using SharpGrip.FluentValidation.AutoValidation.Mvc.Extensions;

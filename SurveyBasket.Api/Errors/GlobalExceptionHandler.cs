@@ -2,9 +2,9 @@
 
 namespace SurveyBasket.Api.Errors;
 
-public class GlobalExceptionHandler(ILogger logger) : IExceptionHandler
+public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IExceptionHandler
 {
-    private readonly ILogger _logger = logger;
+    private readonly ILogger<GlobalExceptionHandler> _logger = logger;
     public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
     {
         _logger.LogError(exception, "Something Went Wrong {Message}", exception.Message);

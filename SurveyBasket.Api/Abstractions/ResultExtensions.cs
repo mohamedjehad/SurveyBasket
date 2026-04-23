@@ -1,6 +1,6 @@
 ﻿namespace SurveyBasket.Api.Abstractions;
 
-public static class ResultExtesnions
+public static class ResultExtensions
 {
     public static ObjectResult ToProblem(this Result result)
     {

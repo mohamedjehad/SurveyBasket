@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Authentication.BearerToken;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using SurveyBasket.Api.Authentication;
@@ -28,8 +27,9 @@ public static class DependencyInjection
         .AllowAnyHeader())
         );
 
-        services.AddScoped<IPollService, PollService>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IPollService, PollService>();
+        services.AddScoped<IQuestionService, QuestionService>();
         services.AddExceptionHandler<GlobalExceptionHandler>();
         services.AddProblemDetails();
         AddMapsterConfig(services);
@@ -85,7 +85,8 @@ public static class DependencyInjection
 
         services.AddAuthentication(options =>
         {
-            options.DefaultAuthenticateScheme = BearerTokenDefaults.AuthenticationScheme;
+            options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
             options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
         }
         ).AddJwtBearer(o =>

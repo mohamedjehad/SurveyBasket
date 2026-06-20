@@ -1,4 +1,5 @@
-﻿using SurveyBasket.Api.Errors;
+﻿using Microsoft.AspNetCore.OutputCaching;
+using SurveyBasket.Api.Errors;
 
 namespace SurveyBasket.Api.Services;
 public class PollService(ApplicationDbContext context) : IPollService
@@ -6,18 +7,21 @@ public class PollService(ApplicationDbContext context) : IPollService
     private readonly ApplicationDbContext _context=context;
     public async Task<IEnumerable<PollResponse>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-       var polls = await _context.Polls.AsNoTracking().ToListAsync();
+       var polls = await _context.Polls
+            .AsNoTracking()
+            .ProjectToType<PollResponse>()
+            .ToListAsync(cancellationToken);
 
-        return polls.Adapt<IEnumerable<PollResponse>>();
+        return polls;
     }
         
-    public async Task<Result<PollResponse>> GetAsync(int id, CancellationToken cancellationToken = default)
+    public async Task<PollResponse?> GetAsync(int id, CancellationToken cancellationToken = default)
     {
-        var poll = await _context.Polls.FindAsync(id);
-
-        return poll is null
-            ? Result.Failure<PollResponse>(PollErrors.NotFoundPoll)
-            : Result.Success(poll.Adapt<PollResponse>());
+        return await _context.Polls
+            .Where(x => x.Id == id)
+            .ProjectToType<PollResponse>()
+            .AsNoTracking()
+            .SingleOrDefaultAsync(cancellationToken);
     }
 
     public async Task<Result<PollResponse>> Add(PollRequest request, CancellationToken cancellationToken = default)
@@ -31,6 +35,7 @@ public class PollService(ApplicationDbContext context) : IPollService
         var poll = request.Adapt<Poll>();
         await _context.AddAsync(poll, cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
+
         return Result.Success(poll.Adapt<PollResponse>());
     }
 
@@ -77,5 +82,17 @@ public class PollService(ApplicationDbContext context) : IPollService
 
         await _context.SaveChangesAsync(cancellationToken);
         return Result.Success();
+    }
+
+    public async Task<IEnumerable<PollResponse>> GetCurrentAsync(CancellationToken cancellationToken = default)
+    {
+        var today=DateOnly.FromDateTime(DateTime.UtcNow);
+        var currentPolls = await _context.Polls
+            .Where(x => x.StartsAt <= today && x.EndsAt >=today&&x.IsPublished)
+            .ProjectToType<PollResponse>()
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+
+        return currentPolls;
     }
 }

@@ -1,3 +1,4 @@
+using Serilog;
 using SurveyBasket.Api;
 
 
@@ -6,39 +7,12 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddDependencies(builder.Configuration);
 
+builder.Host.UseSerilog((context,configuration)=>
+{
+    configuration.ReadFrom.Configuration(context.Configuration);
+});
 
 var app = builder.Build();
-
-if (app.Environment.IsDevelopment())
-{
-    using var scope = app.Services.CreateScope();
-    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-
-    const string email = "admin@surveybasket.local";
-    const string password = "Admin@12345";
-
-    var user = await userManager.FindByEmailAsync(email);
-
-    if (user is null)
-    {
-        user = new ApplicationUser
-        {
-            UserName = email,
-            Email = email,
-            FirstName = "System",
-            LastName = "Admin",
-            EmailConfirmed = true
-        };
-
-        var result = await userManager.CreateAsync(user, password);
-
-        if (!result.Succeeded)
-        {
-            var errors = string.Join(", ", result.Errors.Select(e => e.Description));
-            throw new InvalidOperationException($"Could not seed default user: {errors}");
-        }
-    }
-}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

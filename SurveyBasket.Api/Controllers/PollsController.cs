@@ -17,14 +17,20 @@ public class PollsController(IPollService pollService) : ControllerBase
         return Ok(polls);
     }
 
+    [HttpGet("current")]
+    public async Task<IActionResult> GetCurrent(CancellationToken cancellationToken)
+    {
+        var polls = await _pollService.GetCurrentAsync(cancellationToken);
+        return Ok(polls);
+    }
     [HttpGet("{id}")]
     public async Task<IActionResult> Get([FromRoute]int id, CancellationToken cancellationToken)
     {
-        var result = await _pollService.GetAsync(id);
+        var poll = await _pollService.GetAsync(id, cancellationToken);
 
-        return result.IsSuccess ?
-            Ok(result.Value)
-            :result.ToProblem();
+        return poll is null
+            ? NotFound()
+            : Ok(poll);
     }
 
     [HttpPost]

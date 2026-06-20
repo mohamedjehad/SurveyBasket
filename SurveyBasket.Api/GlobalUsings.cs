@@ -16,6 +16,7 @@ global using SurveyBasket.Api.Presistence;
 global using SurveyBasket.Api.Contracts.Polls;
 global using SurveyBasket.Api.Abstractions;
 global using SurveyBasket.Api.Errors;
+global using SurveyBasket.Api.Extensions;
 
 
 //Validation Packages

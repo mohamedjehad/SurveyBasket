@@ -1,0 +1,7 @@
+﻿namespace SurveyBasket.Api.Contracts.Authentication;
+
+public record RegisterRequest
+(string FirstName,
+string LastName,
+string Password,
+string Email);

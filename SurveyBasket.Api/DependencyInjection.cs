@@ -1,8 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.IdentityModel.Tokens;
 using SurveyBasket.Api.Authentication;
 using SurveyBasket.Api.Errors;
+using SurveyBasket.Api.Settings;
 using System.Security.Claims;
 using System.Text;
 
@@ -16,6 +18,7 @@ public static class DependencyInjection
         services.AddControllers();
         // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
         services.AddOpenApi();
+        services.AddHybridCache();
 
         var allowedOrigins = configuration.GetSection("AllowedOrigins").Get<string[]>();
 
@@ -28,10 +31,13 @@ public static class DependencyInjection
         );
 
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IEmailSender, EmailService>();
         services.AddScoped<IPollService, PollService>();
         services.AddScoped<IQuestionService, QuestionService>();
+        services.AddScoped<IResultService, ResultService>();
         services.AddExceptionHandler<GlobalExceptionHandler>();
         services.AddProblemDetails();
+        services.AddHttpContextAccessor();
         AddMapsterConfig(services);
         AddAuthConfig(services,configuration);
 
@@ -78,10 +84,13 @@ public static class DependencyInjection
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
+        services.Configure<MailSettings>(configuration.GetSection(nameof(MailSettings)));
+
         var jwtSettings= configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>();
 
         services.AddIdentity<ApplicationUser,IdentityRole>()
-            .AddEntityFrameworkStores<ApplicationDbContext>();
+            .AddEntityFrameworkStores<ApplicationDbContext>()
+            .AddDefaultTokenProviders();
 
         services.AddAuthentication(options =>
         {
@@ -102,6 +111,13 @@ public static class DependencyInjection
                 ValidAudience =jwtSettings?.Audience,
                 ValidIssuer = jwtSettings?.Issuer
             };
+        });
+
+        services.Configure<IdentityOptions>(options =>
+        {
+            options.Password.RequiredLength = 8;
+            options.SignIn.RequireConfirmedEmail = true;
+            options.User.RequireUniqueEmail = true;
         });
 
         return services;

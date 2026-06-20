@@ -13,21 +13,19 @@ public class QuestionsController(IQuestionService questionService) : ControllerB
     private readonly IQuestionService _questionService = questionService;
 
     [HttpGet]
-    public async Task<IActionResult> GetAll([FromRoute]int pollId,[FromRoute]int id,CancellationToken cancellationToken)
+    public async Task<IActionResult> GetAll([FromRoute]int pollId,CancellationToken cancellationToken)
     {
-
-        var result = await _questionService.GetAllAsync(pollId, cancellationToken);
-        return result.IsSuccess ? Ok(result.Value)
-            : result.ToProblem();
+        var questions = await _questionService.GetAllAsync(pollId, cancellationToken);
+        return Ok(questions);
     }
 
     [HttpGet("{id}")]
     public async Task<IActionResult> Get([FromRoute] int pollId, [FromRoute] int id, CancellationToken cancellationToken)
     {
-        var result = await  _questionService.GetAsync(pollId,id,cancellationToken);
-        return result.IsSuccess ?
-            Ok(result.Value) :
-            result.ToProblem();
+        var question = await  _questionService.GetAsync(pollId,id,cancellationToken);
+        return question is null
+            ? NotFound()
+            : Ok(question);
     }
 
     [HttpPost]

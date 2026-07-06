@@ -1,10 +1,14 @@
-﻿using Microsoft.AspNetCore.OutputCaching;
+﻿using Hangfire;
+using Microsoft.AspNetCore.OutputCaching;
 using SurveyBasket.Api.Errors;
 
 namespace SurveyBasket.Api.Services;
-public class PollService(ApplicationDbContext context) : IPollService
+public class PollService(ApplicationDbContext context,
+    INotificationService notificationService) : IPollService
 {
     private readonly ApplicationDbContext _context=context;
+    private readonly INotificationService _notificationService = notificationService;
+
     public async Task<IEnumerable<PollResponse>> GetAllAsync(CancellationToken cancellationToken = default)
     {
        var polls = await _context.Polls
@@ -81,6 +85,12 @@ public class PollService(ApplicationDbContext context) : IPollService
         existingPoll.IsPublished = !existingPoll.IsPublished;
 
         await _context.SaveChangesAsync(cancellationToken);
+
+        if(existingPoll.IsPublished&&existingPoll.StartsAt==DateOnly.FromDateTime(DateTime.UtcNow))
+        {
+            BackgroundJob.Enqueue(() => _notificationService.SendNewPollsNotification(existingPoll.Id));
+        }
+
         return Result.Success();
     }
 

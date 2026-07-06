@@ -1,3 +1,7 @@
+using Hangfire;
+using Hangfire.Dashboard;
+using HangfireBasicAuthenticationFilter;
+using Microsoft.OpenApi;
 using Serilog;
 using SurveyBasket.Api;
 
@@ -21,12 +25,30 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(options => options.SwaggerEndpoint("/openapi/v1.json", "v1"));
 }
 
-
+app.UseSerilogRequestLogging();
 app.UseHttpsRedirection();
 
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.UseHangfireDashboard("/jobs", new DashboardOptions
+{
+    Authorization =
+    [
+        new HangfireCustomBasicAuthenticationFilter
+        {
+        User = app.Configuration.GetValue<string>("HangfireSettings:Username"),
+        Pass = app.Configuration.GetValue<string>("HangfireSettings:Password")
+        }
+
+    ],
+    //IsReadOnlyFunc = (DashboardContext context) => true
+});
+
+
+RecurringJob.AddOrUpdate<INotificationService>
+    ("SendNewPollsNotification", x => x.SendNewPollsNotification(null), Cron.Daily());
 
 app.MapControllers();
 

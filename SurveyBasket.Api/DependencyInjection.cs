@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Hangfire;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.IdentityModel.Tokens;
@@ -38,11 +39,11 @@ public static class DependencyInjection
         services.AddExceptionHandler<GlobalExceptionHandler>();
         services.AddProblemDetails();
         services.AddHttpContextAccessor();
-        AddMapsterConfig(services);
-        AddAuthConfig(services,configuration);
-
-        AddFluentValidationConfig(services);
-        AddDatabaseConfig(services, configuration);
+        services.AddMapsterConfig();
+        services.AddAuthConfig(configuration);
+        services.AddBackgroundJobsConfig(configuration);
+        services.AddFluentValidationConfig();
+        services.AddDatabaseConfig(configuration);
 
         return services;
     }
@@ -120,6 +121,17 @@ public static class DependencyInjection
             options.User.RequireUniqueEmail = true;
         });
 
+        return services;
+    }
+    private static IServiceCollection AddBackgroundJobsConfig(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddHangfire(config => config
+         .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+         .UseSimpleAssemblyNameTypeSerializer()
+         .UseRecommendedSerializerSettings()
+         .UseSqlServerStorage(configuration.GetConnectionString("HangfireConnection")));
+
+        services.AddHangfireServer();
         return services;
     }
 }

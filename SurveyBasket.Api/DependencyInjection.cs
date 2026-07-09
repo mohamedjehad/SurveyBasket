@@ -1,9 +1,11 @@
 ﻿using Hangfire;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.IdentityModel.Tokens;
 using SurveyBasket.Api.Authentication;
+using SurveyBasket.Api.Authentication.Filters;
 using SurveyBasket.Api.Errors;
 using SurveyBasket.Api.Settings;
 using System.Security.Claims;
@@ -35,6 +37,7 @@ public static class DependencyInjection
         services.AddScoped<IEmailSender, EmailService>();
         services.AddScoped<IPollService, PollService>();
         services.AddScoped<IQuestionService, QuestionService>();
+        services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IResultService, ResultService>();
         services.AddExceptionHandler<GlobalExceptionHandler>();
         services.AddProblemDetails();
@@ -85,11 +88,14 @@ public static class DependencyInjection
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
+        services.AddTransient<IAuthorizationHandler,PermissionAuthorizationHandler>();
+        services.AddTransient<IAuthorizationPolicyProvider,PermissionPolicyProvider>();
+
         services.Configure<MailSettings>(configuration.GetSection(nameof(MailSettings)));
 
         var jwtSettings= configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>();
 
-        services.AddIdentity<ApplicationUser,IdentityRole>()
+        services.AddIdentity<ApplicationUser,ApplicationRole>()
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders();
 

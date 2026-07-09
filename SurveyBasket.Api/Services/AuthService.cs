@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.IdentityModel.Tokens;
 using SurveyBasket.Api.Abstractions;
+using SurveyBasket.Api.Abstractions.Consts;
 using SurveyBasket.Api.Authentication;
 using SurveyBasket.Api.Errors;
 using SurveyBasket.Api.Helpers;
@@ -17,7 +18,8 @@ public class AuthService(
   SignInManager<ApplicationUser> signInManager,
   ILogger<AuthService> logger,
   IHttpContextAccessor httpContextAccessor,
-  IEmailSender emailSender) : IAuthService
+  IEmailSender emailSender,
+  ApplicationDbContext context) : IAuthService
 {
     private readonly UserManager<ApplicationUser> _userManager = userManager;
     private readonly IJwtProvider _jwtProvider = jwtProvider;
@@ -25,6 +27,7 @@ public class AuthService(
     private readonly ILogger<AuthService> _logger = logger;
     private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
     private readonly IEmailSender _emailSender = emailSender;
+    private readonly ApplicationDbContext _context = context;
     private readonly int _refreshTokenExpiryDays = 14;
 
     public async Task<Result<AuthResponse>> GetTokenAsync(string email, string password, CancellationToken cancellationToken = default)
@@ -40,8 +43,10 @@ public class AuthService(
 
         if (result.Succeeded)
         {
+            var (userRoles, userPermissions) = await GetUserRolesAndPermissionsAsync(user, cancellationToken);
+
             //generate jwt token
-            var (token, expiresIn) = _jwtProvider.GenerateToken(user);
+            var (token, expiresIn) = _jwtProvider.GenerateToken(user,userRoles,userPermissions);
 
             var refreshToken = GenerateRefreshToken();
             var refreshTokenExpiration = DateTime.UtcNow.AddDays(_refreshTokenExpiryDays);
@@ -69,14 +74,14 @@ public class AuthService(
     }
     public async Task<Result<AuthResponse>> GetRefreshTokenAsync(string token, string refreshToken, CancellationToken cancellationToken = default)
     {
-        var userId=_jwtProvider.ValidateToken(token);
+        var userId = _jwtProvider.ValidateToken(token);
 
-        if (userId is null) 
+        if (userId is null)
             return Result.Failure<AuthResponse>(UserErrors.NotFound);
 
         var user = await _userManager.FindByIdAsync(userId);
 
-        if (user is null) 
+        if (user is null)
             return Result.Failure<AuthResponse>(UserErrors.NotFound);
 
         var userRefreshToken = user.RefreshTokens.SingleOrDefault(x => x.Token == refreshToken && x.IsActive);
@@ -86,7 +91,9 @@ public class AuthService(
 
         userRefreshToken.RevokesOn = DateTime.UtcNow;
 
-        var (newToken, expiresIn) = _jwtProvider.GenerateToken(user);
+        var(userRoles, userPermissions) = await GetUserRolesAndPermissionsAsync(user, cancellationToken);
+
+        var (newToken, expiresIn) = _jwtProvider.GenerateToken(user,userRoles,userPermissions);
 
         var newRefreshToken = GenerateRefreshToken();
         var refreshTokenExpiration = DateTime.UtcNow.AddDays(_refreshTokenExpiryDays);
@@ -172,8 +179,12 @@ public class AuthService(
 
         var result= await _userManager.ConfirmEmailAsync(user,code);
 
+
         if (result.Succeeded)
+        {
+            await _userManager.AddToRoleAsync(user, DefaultRoles.Member);
             return Result.Success();
+        }
 
         var error = result.Errors.First();
 
@@ -200,14 +211,16 @@ public class AuthService(
 
         return Result.Success();
     }
-
-    
-    public async Task<Result> SendForgetPasswordCodeAsync(string email)
+   
+    public async Task<Result> SendResetPasswordCodeAsync(string email)
     {
         var user = await _userManager.FindByEmailAsync(email);
 
         if (user is null)
             return Result.Success();
+
+        if (!user.EmailConfirmed)
+            return Result.Failure(UserErrors.EmailNotConfirmed);
 
         var code = await _userManager.GeneratePasswordResetTokenAsync(user);
 
@@ -272,7 +285,6 @@ public class AuthService(
        await Task.CompletedTask;
     }
 
-
     private async Task SendResetPasswordEmail(ApplicationUser user, string code)
     {
         var origin = _httpContextAccessor.HttpContext?.Request.Headers.Origin;
@@ -288,5 +300,22 @@ public class AuthService(
         BackgroundJob.Enqueue(() => _emailSender.SendEmailAsync(user.Email!, "Survey Basket: Reset Password Email", emailBody));
 
         await Task.CompletedTask;
+    }
+
+    private async Task<(IEnumerable<string> roles,IEnumerable<string> permissions)> GetUserRolesAndPermissionsAsync(ApplicationUser user,CancellationToken cancellationToken)
+    {
+        var userRoles = await _userManager.GetRolesAsync(user);
+
+        var userPermissions = await _context.Roles
+            .Join(_context.RoleClaims,
+            role => role.Id,
+            claim => claim.RoleId,
+            (role, claim) => new { role, claim })
+            .Where(x => userRoles.Contains(x.role.Name!))
+            .Select(x => x.claim.ClaimValue)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        return (userRoles, userPermissions);
     }
 }

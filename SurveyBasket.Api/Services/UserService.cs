@@ -34,11 +34,19 @@ public class UserService(UserManager<ApplicationUser>userManager) : IUserService
 
     public async Task<Result> UpdateProfileAsync(UpdateProfileRequest request,string userId)
     {
-        var user = await _userManager.FindByIdAsync(userId);
+        //var user = await _userManager.FindByIdAsync(userId);
 
-        request.Adapt(user);
+        //request.Adapt(user);
 
-        await _userManager.UpdateAsync(user!);
+        //await _userManager.UpdateAsync(user!);
+
+        await _userManager.Users
+            .Where(x => x.Id == userId)
+            .ExecuteUpdateAsync(setters =>
+                setters
+                    .SetProperty(x => x.FirstName, request.FirstName)
+                    .SetProperty(x => x.LastName, request.LastName)
+                    );
 
         return Result.Success();
     }

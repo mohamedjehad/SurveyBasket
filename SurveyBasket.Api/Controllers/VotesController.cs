@@ -1,14 +1,12 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+using SurveyBasket.Api.Abstractions.Consts;
 using SurveyBasket.Api.Contracts.Votes;
-using System.Security.Claims;
 
 namespace SurveyBasket.Api.Controllers;
 
 [Route("api/polls/{pollId}/vote")]
 [ApiController]
-[Authorize]
+[Authorize(DefaultRoles.Member)]
 public class VotesController(IQuestionService questionService,IVoteService voteService) : ControllerBase
 {
     private readonly IQuestionService _questionService = questionService;

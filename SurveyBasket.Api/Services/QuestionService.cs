@@ -1,6 +1,8 @@
 ﻿using Microsoft.Extensions.Caching.Hybrid;
+using SurveyBasket.Api.Contracts.Common;
 using SurveyBasket.Api.Contracts.Polls.Answers;
 using SurveyBasket.Api.Contracts.Questions;
+using System.Linq.Dynamic.Core;
 
 namespace SurveyBasket.Api.Services;
 
@@ -31,26 +33,33 @@ public class QuestionService(ApplicationDbContext context,HybridCache hybridCach
         return Result.Success(question.Adapt<QuestionResponse>());
     }
 
-    public async Task<IEnumerable<QuestionResponse>> GetAllAsync(int pollId, CancellationToken cancellationToken)
+    public async Task<Result<PaginatedList<QuestionResponse>>> GetAllAsync(int pollId,RequestFilters filters, CancellationToken cancellationToken)
     {
-        var cacheKey = $"{_cachePrefix}-{pollId}";
+        var pollIsExist = await _context.Polls.AnyAsync(x => x.Id == pollId);
+        if (!pollIsExist)
+            return Result.Failure<PaginatedList<QuestionResponse>>(PollErrors.NotFoundPoll);
 
-        var questions = await _hybridCache.GetOrCreateAsync<IEnumerable<QuestionResponse>>(
-          cacheKey,
-         async cacheEntry =>
+        var query = _context.Questions
+       .Where(x => x.PollId == pollId);
+       
+       if(!string.IsNullOrEmpty(filters.SearchValue))
+        {
+            query = query.Where(x => x.Content.Contains(filters.SearchValue));
+        }
 
-       await _context.Questions
-      .Where(x => x.PollId == pollId && x.IsActive)
-      .Include(x => x.Answers)
-      .Select(q => new QuestionResponse(
-      q.Id,
-      q.Content,
-      q.Answers.Where(a => a.IsActive).Select(a => new AnswerResponse(a.Id, a.Content))
-      ))
-      .AsNoTracking()
-      .ToListAsync(cancellationToken)
-  );
-        return questions;
+       if(!string.IsNullOrEmpty(filters.SortColumn))
+        {
+            query = query.OrderBy($"{filters.SortColumn} {filters.SortDirection}");
+        } 
+        
+       var source = query
+                       .Include(x => x.Answers)
+                       .ProjectToType<QuestionResponse>()
+                       .AsNoTracking();
+  
+        var questions = await PaginatedList<QuestionResponse>.CreateAsync(source,filters.PageSize,filters.PageNumber,cancellationToken);
+
+        return Result.Success(questions);
   }
 
 
@@ -65,30 +74,40 @@ public class QuestionService(ApplicationDbContext context,HybridCache hybridCach
             .SingleOrDefaultAsync(cancellationToken);
     }
 
-    public async Task<Result<IEnumerable<QuestionResponse>>> GetAvailableAsync(int pollId,string userId, CancellationToken cancellationToken)
+    public async Task<Result<IEnumerable<QuestionResponse>>> GetAvailableAsync(int pollId, string userId, CancellationToken cancellationToken)
     {
+        var cacheKey = $"{_cachePrefix}-{pollId}";
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var pollIsExists = await _context.Polls
-            .AnyAsync(x => x.Id == pollId&&x.IsPublished&&x.StartsAt<=today&&x.EndsAt>=today);
+            .AnyAsync(x => x.Id == pollId && x.IsPublished && x.StartsAt <= today && x.EndsAt >= today);
 
         if (!pollIsExists)
             return Result.Failure<IEnumerable<QuestionResponse>>(PollErrors.NotFoundPoll);
         var hasVotes = await _context.Votes.AnyAsync(x => x.UserId == userId && x.PollId == pollId);
 
-        if (!hasVotes)
+        if (hasVotes)
             return Result.Failure<IEnumerable<QuestionResponse>>(VoteErrors.DuplicatedVote);
 
-        var questions=await _context.Questions
-            .Where(q=>q.PollId == pollId&&q.IsActive)
-            .Include(q=>q.Answers)
-            .Select(a => 
-            new QuestionResponse(
-            a.Id,
-            a.Content,
-            a.Answers.Where(a => a.IsActive)
-            .Select(a => new AnswerResponse(a.Id, a.Content))
-            )).AsNoTracking()
-            .ToListAsync(cancellationToken);
+
+        var questions = await _hybridCache.GetOrCreateAsync(
+            cacheKey,
+            async token =>
+            {
+                return await _context.Questions
+                    .Where(q => q.PollId == pollId && q.IsActive)
+                    .Include(q => q.Answers)
+                    .AsNoTracking()
+                    //.Select(q => new QuestionResponse(
+                    //    q.Id,
+                    //    q.Content,
+                    //    q.Answers
+                    //        .Where(a => a.IsActive)
+                    //        .Select(a => new AnswerResponse(a.Id, a.Content))
+                    //))
+                    .ProjectToType<QuestionResponse>()
+                    .ToListAsync(token);
+            },
+            cancellationToken: cancellationToken);
 
         return Result.Success<IEnumerable<QuestionResponse>>(questions);
     }

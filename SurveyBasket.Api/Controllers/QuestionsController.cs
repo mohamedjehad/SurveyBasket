@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authorization;
 using SurveyBasket.Api.Abstractions.Consts;
 using SurveyBasket.Api.Authentication.Filters;
+using SurveyBasket.Api.Contracts.Common;
 using SurveyBasket.Api.Contracts.Questions;
 using System.Reflection.Metadata.Ecma335;
 
@@ -17,9 +18,9 @@ public class QuestionsController(IQuestionService questionService) : ControllerB
     [HttpGet]
     [HasPermission(Permissions.GetQuestions)]
 
-    public async Task<IActionResult> GetAll([FromRoute]int pollId,CancellationToken cancellationToken)
+    public async Task<IActionResult> GetAll([FromRoute]int pollId, [FromQuery] RequestFilters filters,CancellationToken cancellationToken)
     {
-        var questions = await _questionService.GetAllAsync(pollId, cancellationToken);
+        var questions = await _questionService.GetAllAsync(pollId,filters, cancellationToken);
         return Ok(questions);
     }
 

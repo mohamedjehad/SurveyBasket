@@ -105,4 +105,15 @@ public class PollService(ApplicationDbContext context,
 
         return currentPolls;
     }
+    public async Task<IEnumerable<PollResponseV2>> GetCurrentAsyncV2(CancellationToken cancellationToken = default)
+    {
+        var today=DateOnly.FromDateTime(DateTime.UtcNow);
+        var currentPolls = await _context.Polls
+            .Where(x => x.StartsAt <= today && x.EndsAt >=today&&x.IsPublished)
+            .ProjectToType<PollResponseV2>()
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+
+        return currentPolls;
+    }
 }

@@ -1,13 +1,15 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Asp.Versioning;
+using Microsoft.AspNetCore.Authorization;
 using SurveyBasket.Api.Abstractions.Consts;
 using SurveyBasket.Api.Authentication.Filters;
 
 namespace SurveyBasket.Api.Controllers;
 
-[Route("api/[controller]")]
+[ApiVersion(1)]
+[ApiVersion(2)]
+[Route("api/v:{v:apiVersion}/[controller]")]
 [ApiController]
 [Authorize]
-
 public class PollsController(IPollService pollService) : ControllerBase
 {
     private readonly IPollService _pollService= pollService;
@@ -21,15 +23,26 @@ public class PollsController(IPollService pollService) : ControllerBase
     }
 
     [HttpGet("current")]
+    [MapToApiVersion(1)]
     [Authorize(DefaultRoles.Member)]
     public async Task<IActionResult> GetCurrent(CancellationToken cancellationToken)
     {
         var polls = await _pollService.GetCurrentAsync(cancellationToken);
         return Ok(polls);
     }
+
+    [HttpGet("current")]
+    [MapToApiVersion(2)]
+    [Authorize(DefaultRoles.Member)]
+    public async Task<IActionResult> GetCurrentV2(CancellationToken cancellationToken)
+    {
+        var polls = await _pollService.GetCurrentAsyncV2(cancellationToken);
+        return Ok(polls);
+    }
+
+
     [HttpGet("{id}")]
     [HasPermission(Permissions.GetPolls)]
-
     public async Task<IActionResult> Get([FromRoute]int id, CancellationToken cancellationToken)
     {
         var poll = await _pollService.GetAsync(id, cancellationToken);

@@ -8,7 +8,7 @@ using System.Reflection.Metadata.Ecma335;
 
 namespace SurveyBasket.Api.Controllers;
 
-[Route("api/polls/{pollId}/[controller]")]
+[Route("api/v:{v:apiVersion}/polls/{pollId}/[controller]")]
 [ApiController]
 [Authorize]
 public class QuestionsController(IQuestionService questionService) : ControllerBase

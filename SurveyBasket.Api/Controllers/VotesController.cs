@@ -5,7 +5,7 @@ using SurveyBasket.Api.Contracts.Votes;
 
 namespace SurveyBasket.Api.Controllers;
 
-[Route("api/polls/{pollId}/vote")]
+[Route("api/v:{v:apiVersion}/polls/{pollId}/vote")]
 [ApiController]
 [Authorize(DefaultRoles.Member)]
 [EnableRateLimiting("concurrency")]

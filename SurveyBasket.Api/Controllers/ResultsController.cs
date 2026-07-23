@@ -6,7 +6,7 @@ using SurveyBasket.Api.Authentication.Filters;
 
 namespace SurveyBasket.Api.Controllers;
 
-[Route("api/polls/{pollId}/[controller]")]
+[Route("api/v:{v:apiVersion}/polls/{pollId}/[controller]")]
 [ApiController]
 [HasPermission(Permissions.GetResults)]
 public class ResultsController(IResultService resultService) : ControllerBase

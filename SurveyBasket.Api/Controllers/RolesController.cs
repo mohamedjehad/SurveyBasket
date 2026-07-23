@@ -6,7 +6,7 @@ using SurveyBasket.Api.Contracts.Roles;
 
 namespace SurveyBasket.Api.Controllers;
 
-[Route("api/[controller]")]
+[Route("api/v:{v:apiVersion}/[controller]")]
 [ApiController]
 public class RolesController(IRoleService roleService) : ControllerBase
 {

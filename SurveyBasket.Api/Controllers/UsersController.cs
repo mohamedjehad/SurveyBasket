@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace SurveyBasket.Api.Controllers;
 
-[Route("api/[controller]")]
+[Route("api/v:{v:apiVersion}/[controller]")]
 [ApiController]
 public class UsersController(IUserService userService) : ControllerBase
 {

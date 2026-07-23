@@ -7,7 +7,7 @@ using SurveyBasket.Api.Contracts.Users;
 
 namespace SurveyBasket.Api.Controllers;
 
-[Route("me")]
+[Route("v:{v:apiVersion}/me")]
 [ApiController]
 [Authorize]
 public class AccountController(IUserService userService) : ControllerBase

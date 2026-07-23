@@ -1,6 +1,6 @@
 ﻿namespace SurveyBasket.Api.Controllers;
 
-[Route("[controller]")]
+[Route("v:{v:apiVersion}/[controller]")]
 [ApiController]
 public class AuthController(IAuthService authService) : ControllerBase
 {
